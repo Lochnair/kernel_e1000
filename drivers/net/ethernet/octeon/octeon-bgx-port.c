@@ -34,6 +34,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/list.h>
+#include <linux/if_vlan.h>
 
 #include <asm/octeon/cvmx-helper.h>
 #include <asm/octeon/cvmx-helper-util.h>
@@ -347,7 +348,6 @@ int setup_sgmii_port_phy_mode(int bgx, int port)
 	return 0;
 }
 EXPORT_SYMBOL(setup_sgmii_port_phy_mode);
-extern int config_sgmii_first_time[8]; 
 #endif
 
 #define REMAP_LOGIC_PORT 
@@ -446,7 +446,7 @@ int bgx_port_enable(struct net_device *netdev)
 	bool dont_use_phy;
 	union cvmx_bgxx_cmrx_config cfg;
 	struct bgx_port_priv *priv = bgx_port_netdev2priv(netdev);
-
+	cvmx_helper_link_info_t link_info;
 
 	cfg.u64 = cvmx_read_csr_node(priv->numa_node, CVMX_BGXX_CMRX_CONFIG(priv->index, priv->bgx_interface));
 	if (cfg.s.lmac_type == 0 || cfg.s.lmac_type == 5) {
@@ -520,6 +520,15 @@ int bgx_port_enable(struct net_device *netdev)
 			setup_sgmii_port_phy_mode(priv->bgx_interface, priv->index);
 			cvmx_helper_set_mac_phy_mode(priv->xiface, priv->index, true);
 			dont_use_phy = true;
+
+			link_info.s.link_up = 1;
+			link_info.s.full_duplex = 1;
+			if (OCTEON_IS_MODEL(OCTEON_CN78XX)) {
+				link_info.s.speed = cvmx_qlm_get_gbaud_mhz_node(priv->numa_node, cvmx_qlm_lmac(priv->xiface, priv->index)) * 8 / 10;
+			} else {
+				link_info.s.speed = cvmx_qlm_get_gbaud_mhz(cvmx_qlm_lmac(priv->xiface, priv->index)) * 8 / 10;
+			}
+			cvmx_helper_link_set(priv->ipd_port, link_info);
 		}	
 		break;
 #endif
@@ -579,11 +588,6 @@ int bgx_port_disable(struct net_device *netdev)
 	struct bgx_port_priv *priv = bgx_port_netdev2priv(netdev);
 	cvmx_helper_link_info_t link_info;
 	
-#ifdef FIX_1G_SW_MODE
-	if(priv->bgx_interface*4 + priv->index < 8)
-		config_sgmii_first_time[priv->bgx_interface*4 + priv->index] = 0;
-#endif
-
 	if (priv->phydev)
 		phy_disconnect(priv->phydev);
 	priv->phydev = NULL;
@@ -624,7 +628,7 @@ int bgx_port_change_mtu(struct net_device *netdev, int new_mtu)
 
 	netdev->mtu = new_mtu;
 
-	max_frame = round_up(new_mtu + ETH_HLEN + ETH_FCS_LEN, 8);
+	max_frame = round_up(new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN, 8);
 
 	cfg.u64 = cvmx_read_csr_node(priv->numa_node, CVMX_BGXX_CMRX_CONFIG(priv->index, priv->bgx_interface));
 	if (cfg.s.lmac_type == 0 || cfg.s.lmac_type == 5)

@@ -84,6 +84,33 @@ CVMX_SHARED int(*cvmx_helper_bgx_override_autoneg)(int xiface, int index) = NULL
  */
 CVMX_SHARED int(*cvmx_helper_bgx_override_fec)(int xiface, int index) = NULL;
 
+int get_pcs_link_status(int port)
+{
+	cvmx_bgxx_gmp_pcs_mrx_status_t gmp_pcs_mrx_status;
+	int bgx = 0, port_id = port;
+	int ret = 0;
+
+	if (port >= 4 && port < 8) {
+		bgx = 1;
+		port_id = port - 4;
+	} else if (port >= 8) {
+		return -1;
+	}
+
+	gmp_pcs_mrx_status.u64 = cvmx_read_csr_node(0, CVMX_BGXX_GMP_PCS_MRX_STATUS(port_id, bgx));
+
+	/*
+	 * Link state:
+	 * 0 = link down.
+	 * 1 = link up.
+	 * Set during autonegotiation process. Set whenever XMIT = DATA. Latching-low behavior when
+	 * link goes down. Link down value of the bit stays low until software reads the register.
+	 */
+	ret = gmp_pcs_mrx_status.s.lnk_st;
+
+	return ret;
+}
+EXPORT_SYMBOL(get_pcs_link_status);
 
 int get_serdes_link_status(int port)
 {
@@ -123,7 +150,12 @@ int get_bgx_port_link_status(int bgx_id, int port)
 	int ret;
 	int port_id = bgx_id*4 + port;
 
-	ret = get_serdes_link_status(port_id);
+	/* Check PCS link status in SGMII mode */
+	if (cvmx_helper_bgx_get_mode(bgx_id, port) == CVMX_HELPER_INTERFACE_MODE_SGMII) {
+		ret = get_serdes_link_status(port_id) & get_pcs_link_status(port_id);
+	} else {
+		ret = get_serdes_link_status(port_id);
+	}
 
 //	DPRINT("link status = %x \n", ret);
 	return ret;
@@ -1034,8 +1066,6 @@ int cvmx_helper_set_autonegotiation(int xiface, int index, bool enable)
 #ifdef FIX_1G_SW_MODE
 extern int get_cs4223_link_status(int bgx_id, int port);
 extern int get_bgx_port_link_status(int bgx_id, int port);
-int config_sgmii_first_time[8]  = {0};
-EXPORT_SYMBOL(config_sgmii_first_time);
 #endif
 cvmx_helper_link_info_t __cvmx_helper_bgx_sgmii_link_get(int xipd_port)
 {
@@ -1098,9 +1128,7 @@ cvmx_helper_link_info_t __cvmx_helper_bgx_sgmii_link_get(int xipd_port)
 		/* Note that this also works for 1000base-X mode */
 
 #ifdef FIX_1G_SW_MODE
-		if(get_bgx_port_link_status(xi.interface, index) || 
-						config_sgmii_first_time[xi.interface*4 + index] == 0){
-		config_sgmii_first_time[xi.interface*4 + index] = 1;				
+		if (get_bgx_port_link_status(xi.interface, index)) {
 #endif
 			result.s.speed = speed * 8 / 10;
 			result.s.full_duplex = 1;
