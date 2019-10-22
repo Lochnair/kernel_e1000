@@ -366,6 +366,26 @@ static int CVM_OCT_NAPI_POLL(struct napi_struct *napi, int budget)
 					ts->hwtstamp = ns_to_ktime(ns);
 					__skb_pull(skb, 8);
 				}
+#ifdef CONFIG_UBNT_E300
+				if (octeon_board_major_rev() == BOARD_E302_MAJOR ||
+					octeon_board_major_rev() == BOARD_E303_MAJOR) {
+					/* check vlan-aware state and do not stick tag with eth8-11 */
+					if(cvm_oct_get_vlan_aware_state()) {
+						if (priv->interface == 1) {
+							u16 vlan_tci = 0;
+							__vlan_get_tag(skb, &vlan_tci);
+							if (vlan_tci > 0 && vlan_tci < cvm_oct_get_vlan_base_vid()) {
+								// Insert VID 0xffe when
+								// 1. vlan_aware is enabled and
+								// 2. VID of RX packet isn't in range of reserverd VID
+								skb = vlan_insert_tag(skb, htons(ETH_P_8021Q), cvm_oct_get_vlan_switch0_vid());
+								if (!skb)
+									return rx_count;
+							}
+						}
+					}
+				}
+#endif //CONFIG_UBNT_E300
 				skb->protocol = eth_type_trans(skb, priv->netdev);
 				skb->dev = priv->netdev;
 

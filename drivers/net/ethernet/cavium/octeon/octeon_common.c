@@ -192,5 +192,36 @@ int cvm_oct_common_change_mtu(struct net_device *dev, int mtu, u64 base_reg,
 }
 EXPORT_SYMBOL(cvm_oct_common_change_mtu);
 
+#ifdef CONFIG_UBNT_E300
+static u16 vlan_base_vid=0;;
+static u16 vlan_switch0_vid=0;
+static u32 is_vlan_aware_enabled=0;
+inline int cvm_oct_get_vlan_aware_state(void)
+{
+	return is_vlan_aware_enabled;
+}
+EXPORT_SYMBOL(cvm_oct_get_vlan_aware_state);
+
+inline int cvm_oct_get_vlan_base_vid(void)
+{
+	return vlan_base_vid;
+}
+EXPORT_SYMBOL(cvm_oct_get_vlan_base_vid);
+
+inline int cvm_oct_get_vlan_switch0_vid(void)
+{
+	return vlan_switch0_vid;
+}
+EXPORT_SYMBOL(cvm_oct_get_vlan_switch0_vid);
+
+void cvm_oct_set_vlan_aware_cb(u32 status, u16 base_vid, u16 sw0_vid)
+{
+	vlan_base_vid = base_vid;
+	vlan_switch0_vid = sw0_vid;
+	is_vlan_aware_enabled = status;
+}
+EXPORT_SYMBOL(cvm_oct_set_vlan_aware_cb);
+#endif /* CONFIG_UBNT_E300 */
+
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cavium, Inc. Common Network Driver");

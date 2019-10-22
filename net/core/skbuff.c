@@ -94,7 +94,7 @@ struct skb_cb_table {
 	atomic_t		refcnt;
 };
 
-static DEFINE_SPINLOCK(skb_cb_store_lock);
+//static DEFINE_SPINLOCK(skb_cb_store_lock);
 
 int skb_save_cb(struct sk_buff *skb)
 {
@@ -130,17 +130,18 @@ int skb_restore_cb(struct sk_buff *skb)
 	memcpy(skb->cb, next->cb, sizeof(skb->cb));
 	skb->cb_next = next->cb_next;
 
-	spin_lock(&skb_cb_store_lock);
+	//spin_lock(&skb_cb_store_lock);
 
 	if (atomic_dec_and_test(&next->refcnt))
 		kmem_cache_free(skbuff_cb_store_cache, next);
 
-	spin_unlock(&skb_cb_store_lock);
+	//spin_unlock(&skb_cb_store_lock);
 
 	return 0;
 }
 EXPORT_SYMBOL(skb_restore_cb);
 
+#if 0
 static void skb_copy_stored_cb(struct sk_buff *   , const struct sk_buff *     ) __attribute__ ((unused));
 static void skb_copy_stored_cb(struct sk_buff *new, const struct sk_buff *__old)
 {
@@ -162,6 +163,7 @@ static void skb_copy_stored_cb(struct sk_buff *new, const struct sk_buff *__old)
 
 	spin_unlock(&skb_cb_store_lock);
 }
+#endif
 #endif
 
 /**

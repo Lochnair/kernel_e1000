@@ -102,7 +102,7 @@ static struct net_device *imq_devs_cache[IMQ_MAX_DEVS];
 #define IMQ_MAX_QUEUES 32
 static int numqueues = 1;
 static u32 imq_hashrnd;
-static int imq_dev_accurate_stats = 1;
+static int imq_dev_accurate_stats = 0;
 
 static inline __be16 pppoe_proto(const struct sk_buff *skb)
 {

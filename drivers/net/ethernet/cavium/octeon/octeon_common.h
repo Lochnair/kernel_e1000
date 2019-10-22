@@ -37,4 +37,10 @@ extern int cvm_oct_common_set_mac_address(struct net_device *dev, void *addr,
 
 extern int cvm_oct_common_change_mtu(struct net_device *dev, int mtu, u64 base_reg,
 		u64 pip_reg, int mtu_limit);
+
+#ifdef CONFIG_UBNT_E300
+extern int cvm_oct_get_vlan_aware_state(void);
+extern int cvm_oct_get_vlan_base_vid(void);
+extern int cvm_oct_get_vlan_switch0_vid(void);
+#endif /* CONFIG_UBNT_E300 */
 #endif

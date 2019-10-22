@@ -70,6 +70,24 @@ CVM_OCT_XMIT
 	 */
 	prefetch(priv);
 
+#ifdef CONFIG_UBNT_E300
+	if (octeon_board_major_rev() == BOARD_E302_MAJOR ||
+		octeon_board_major_rev() == BOARD_E303_MAJOR) {
+		/* check vlan-aware state and do not pop tag with eth8-11 */
+		if (cvm_oct_get_vlan_aware_state()) {
+			if (priv->interface == 1) {
+				u16 vlan_tci = 0;
+				__vlan_get_tag(skb, &vlan_tci);
+				if (vlan_tci == cvm_oct_get_vlan_switch0_vid() &&
+					skb_vlan_tagged_multi(skb)) {
+					// Remove VID 0xffe when vlan_aware is enabled and skb has VID 0xffe.
+					__skb_vlan_pop(skb, &vlan_tci);
+				}
+			}
+		}
+	}
+#endif //CONFIG_UBNT_E300
+
 	if (USE_ASYNC_IOBDMA) {
 		/* Save scratch in case userspace is using it */
 		CVMX_SYNCIOBDMA;
