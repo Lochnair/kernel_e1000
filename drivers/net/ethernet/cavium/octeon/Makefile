@@ -23,3 +23,5 @@ octeon-ethernet-objs += ethernet-tx.o
 ifdef CONFIG_RAPIDIO
 octeon-ethernet-objs += ethernet-srio.o
 endif
+
+cflags-y += -Wno-error=incompatible-pointer-types
