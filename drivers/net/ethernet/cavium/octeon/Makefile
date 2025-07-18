@@ -25,3 +25,4 @@ octeon-ethernet-objs += ethernet-srio.o
 endif
 
 cflags-y += -Wno-error=incompatible-pointer-types
+ccflags-y += -Wno-error=incompatible-pointer-types
